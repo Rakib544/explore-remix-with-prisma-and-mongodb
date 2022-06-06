@@ -1,15 +1,20 @@
-import type { ActionFunction } from "@remix-run/node";
-import { json } from "@remix-run/node";
+import type { ActionFunction, LoaderFunction } from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
 import { Form } from "@remix-run/react";
 import * as React from "react";
 import { FormField } from "~/components/form-field";
 import { Layout } from "~/components/layout";
-import { login, register } from "~/utils/auth.server";
+import { getUser, login, register } from "~/utils/auth.server";
 import {
   validateEmail,
   validateName,
   validatePassword,
 } from "~/utils/validators.server";
+
+export const loader: LoaderFunction = async ({ request }) => {
+  // If there's already a user in the session, redirect to the home page
+  return (await getUser(request)) ? redirect("/") : null;
+};
 
 export const action: ActionFunction = async ({ request }) => {
   const form = await request.formData();

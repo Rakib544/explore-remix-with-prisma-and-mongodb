@@ -2,9 +2,8 @@ interface FormFieldProps {
   htmlFor: string;
   label: string;
   type?: string;
-  // value: any;
-  // onChange?: (...args: any) => any;
   name: string;
+  error?: string;
 }
 
 export function FormField({
@@ -12,9 +11,8 @@ export function FormField({
   label,
   type = "text",
   name,
-}: // value,
-// onChange = () => {},
-FormFieldProps) {
+  error = "",
+}: FormFieldProps) {
   return (
     <>
       <label htmlFor={htmlFor} className="text-blue-600 font-semibold">

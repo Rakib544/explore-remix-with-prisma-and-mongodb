@@ -1,23 +1,81 @@
-import React from "react";
+import type { ActionFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { Form } from "@remix-run/react";
+import * as React from "react";
 import { FormField } from "~/components/form-field";
 import { Layout } from "~/components/layout";
+import { login, register } from "~/utils/auth.server";
+import {
+  validateEmail,
+  validateName,
+  validatePassword,
+} from "~/utils/validators.server";
+
+export const action: ActionFunction = async ({ request }) => {
+  const form = await request.formData();
+  const action = form.get("_action");
+  const email = form.get("email");
+  const password = form.get("password");
+  let firstName = form.get("firstName");
+  let lastName = form.get("lastName");
+
+  console.log({ email, password, firstName, lastName });
+
+  if (
+    typeof action !== "string" ||
+    typeof email !== "string" ||
+    typeof password !== "string"
+  ) {
+    return json({ error: `Invalid Form Data`, form: action }, { status: 400 });
+  }
+
+  if (
+    action === "register" &&
+    (typeof firstName !== "string" || typeof lastName !== "string")
+  ) {
+    return json({ error: `Invalid Form Data`, form: action }, { status: 400 });
+  }
+
+  const errors = {
+    email: validateEmail(email),
+    password: validatePassword(password),
+    ...(action === "register"
+      ? {
+          firstName: validateName((firstName as string) || ""),
+          lastName: validateName((lastName as string) || ""),
+        }
+      : {}),
+  };
+
+  if (Object.values(errors).some(Boolean))
+    return json(
+      {
+        errors,
+        fields: { email, password, firstName, lastName },
+        form: action,
+      },
+      { status: 400 }
+    );
+
+  switch (action) {
+    case "login": {
+      console.log("login");
+      return await login({ email, password });
+    }
+    case "register": {
+      firstName = firstName as string;
+      lastName = lastName as string;
+      console.log("register");
+      return await register({ email, password, firstName, lastName });
+    }
+    default:
+      return json({ error: `Invalid Form Data` }, { status: 400 });
+  }
+};
 
 export default function Login() {
   const [action, setAction] = React.useState("login");
 
-  const [formData, setFormData] = React.useState({
-    email: "",
-    password: "",
-    firstName: "",
-    lastName: "",
-  });
-
-  const handleInputChange = (
-    event: React.ChangeEvent<HTMLInputElement>,
-    field: string
-  ) => {
-    setFormData((form) => ({ ...form, [field]: event?.target.value }));
-  };
   return (
     <Layout>
       <div className="h-full justify-center items-center flex flex-col gap-y-4">
@@ -37,35 +95,23 @@ export default function Login() {
         </p>
 
         {/* form */}
-        <form method="POST" className="rounded-2xl bg-gray-200 p-6 w-96">
+        <Form method="post" className="rounded-2xl bg-gray-200 p-6 w-96">
           {action === "register" && (
             <>
               <FormField
                 htmlFor="firstName"
                 label="First Name"
-                onChange={(e) => handleInputChange(e, "firstName")}
-                value={formData.firstName}
+                name="firstName"
               />
-              <FormField
-                htmlFor="lastName"
-                label="Last Name"
-                onChange={(e) => handleInputChange(e, "lastName")}
-                value={formData.lastName}
-              />
+              <FormField htmlFor="lastName" label="Last Name" name="lastName" />
             </>
           )}
-          <FormField
-            htmlFor="email"
-            label="Email"
-            value={formData.email}
-            onChange={(e) => handleInputChange(e, "email")}
-          />
+          <FormField htmlFor="email" label="Email" name="email" />
           <FormField
             htmlFor="password"
             type="password"
             label="Password"
-            value={formData.password}
-            onChange={(e) => handleInputChange(e, "password")}
+            name="password"
           />
           <div className="w-full text-center">
             <button
@@ -77,7 +123,7 @@ export default function Login() {
               {action === "login" ? "Sign In" : "Sign Up"}
             </button>
           </div>
-        </form>
+        </Form>
       </div>
     </Layout>
   );
